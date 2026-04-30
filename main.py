@@ -35,7 +35,15 @@ async def add_user(name: str = Query("Guest", min_length=3, max_length=10),
     return {name:password}
 
 
+class Item(BaseModel):
+    id: int
+    name: str
+    price: float
+    tax: float | None =None #nullable
 
+@app.post("/add_item")
+async def create_item(item: Item):
+    return item
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
