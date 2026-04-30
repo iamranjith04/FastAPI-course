@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Query, Path
+from typing import List
+
+from fastapi import FastAPI, Query, Path, Body
 import uvicorn
 from starlette.status import HTTP_204_NO_CONTENT
 from pydantic import BaseModel
@@ -41,9 +43,32 @@ class Item(BaseModel):
     price: float
     tax: float | None =None #nullable
 
+class User(BaseModel):
+    name: str
+    phone_no: str | None = None
+
 @app.post("/add_item")
 async def create_item(item: Item):
     return item
+
+#Making Query Variable into Body Variable using Body()
+@app.post("/bill_item")
+async def generate_bill(items: List[Item], user: User, discount: int | None = Body(...)):
+    """
+    When you have multiple Pydantic models in a FastAPI endpoint (like your items and user),
+    FastAPI automatically expects them to be keys in a single JSON body.
+    However, if you have only one Pydantic model but you still want it to be wrapped in a
+    specific key, you use the embed=True parameter within Body()
+    """
+    total = 0
+    for item in items:
+        total+=item.tax+item.price
+    if discount:
+        final_price = total - (total * (discount/100))
+        return {user.name : final_price}
+    return {user.name: total}
+
+
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
