@@ -1,9 +1,7 @@
-from typing import List
-
 from fastapi import FastAPI, Query, Path, Body
 import uvicorn
 from starlette.status import HTTP_204_NO_CONTENT
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 app=FastAPI()
 
@@ -45,15 +43,15 @@ class Item(BaseModel):
 
 class User(BaseModel):
     name: str
-    phone_no: str | None = None
+    phone_no: str | None = Field(None, max_length=10, min_length=10, title="User mobile number")
 
-@app.post("/add_item")
+@app.post("/add_item", tags=["Request Body"])
 async def create_item(item: Item):
     return item
 
 #Making Query Variable into Body Variable using Body()
-@app.post("/bill_item")
-async def generate_bill(items: List[Item], user: User, discount: int | None = Body(...)):
+@app.post("/bill_item", tags=["Request Body"])
+async def generate_bill(items: list[Item], user: User, discount: int | None = Body(...)):
     """
     When you have multiple Pydantic models in a FastAPI endpoint (like your items and user),
     FastAPI automatically expects them to be keys in a single JSON body.
