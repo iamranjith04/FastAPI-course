@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, Path, Body, Cookie, Header,Form
+from fastapi import FastAPI, Query, Path, Body, Cookie, Header,Form, File, UploadFile
 import uvicorn
 from starlette.status import HTTP_204_NO_CONTENT
 from pydantic import BaseModel, Field
@@ -80,9 +80,23 @@ async def getHeaderAndCookies(
     }
 
 #Form fields
-@app.post("/login")
+@app.post("/login", tags=["Form"])
 async def login(username: str = Form(...), password: str = Form(..., min_length=8)):
     return {username : password}
+
+#File upload
+@app.post("/files", tags=["File"])
+async def files_read(file: bytes|None = File(None)):
+
+    if not file:
+        return "No file found"
+    return {"fileLength: ":len(file)}
+
+@app.post("/uploadFile", tags=["File"])
+async def upload_file(file: UploadFile|None = None):
+    if not file:
+        return "No file found"
+    return {"fileNone: ": file.filename }
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
