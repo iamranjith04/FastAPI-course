@@ -1,6 +1,4 @@
-from email.header import Header
-
-from fastapi import FastAPI, Query, Path, Body, Cookie, Header
+from fastapi import FastAPI, Query, Path, Body, Cookie, Header,Form
 import uvicorn
 from starlette.status import HTTP_204_NO_CONTENT
 from pydantic import BaseModel, Field
@@ -80,6 +78,11 @@ async def getHeaderAndCookies(
         "accept_encoding": accept_encoding,
         "host" : host
     }
+
+#Form fields
+@app.post("/login")
+async def login(username: str = Form(...), password: str = Form(..., min_length=8)):
+    return {username : password}
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
