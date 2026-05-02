@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Query, Path, Body
+from email.header import Header
+
+from fastapi import FastAPI, Query, Path, Body, Cookie, Header
 import uvicorn
 from starlette.status import HTTP_204_NO_CONTENT
 from pydantic import BaseModel, Field
@@ -66,7 +68,18 @@ async def generate_bill(items: list[Item], user: User, discount: int | None = Bo
         return {user.name : final_price}
     return {user.name: total}
 
-
+#Header and cookie parameter
+@app.get("/headersAndCookies", tags=["Header", "Cookie"])
+async def getHeaderAndCookies(
+  cookie_id : int | None = Cookie(None),
+  accept_encoding : str | None = Header(None),
+  host : str|None = Header(None)
+):
+    return {
+        "cookie_id": cookie_id,
+        "accept_encoding": accept_encoding,
+        "host" : host
+    }
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
