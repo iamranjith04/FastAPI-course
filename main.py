@@ -1,3 +1,5 @@
+from typing import List, Annotated
+
 from fastapi import FastAPI, Query, Path, Body, Cookie, Header,Form, File, UploadFile
 import uvicorn
 from starlette.status import HTTP_204_NO_CONTENT
@@ -96,9 +98,15 @@ async def files_read(file: bytes|None = File(None)):
 async def upload_file(file: UploadFile|None = None):
     if not file:
         return "No file found"
-    return {"fileNone: ": file.filename }
+    return {"fileName: ": file.filename }
+
+@app.post("/MultipleFileUpload", tags=["File"])
+async def mut_file_upload(files: List[UploadFile] = File(...)):
+    if not files:
+        return "No file found"
+    return {"fileName: ": [file.filename for file in files] }
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=7800, reload=True)
 
 
