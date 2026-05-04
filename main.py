@@ -106,6 +106,22 @@ async def mut_file_upload(files: List[UploadFile] = File(...)):
         return "No file found"
     return {"fileName: ": [file.filename for file in files] }
 
+#Response Model
+class UserDetails(BaseModel):
+    name: str
+    age: int
+    username: str
+
+class UserLogin(UserDetails):
+    password: str = Field(..., min_length=8)
+
+class UserLoginOutput(UserDetails):
+    message : str="Welcome User"
+
+@app.post("/userLogin", response_model=UserLoginOutput, response_model_exclude=["name", "age"])
+async def user_login(user: UserLogin):
+    return user
+
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=7800, reload=True)
 
