@@ -1,6 +1,18 @@
-from typing import List, Annotated
+from typing import List
 
-from fastapi import FastAPI, Query, Path, Body, Cookie, Header,Form, File, UploadFile
+from fastapi import (FastAPI,
+                     Query,
+                     Path,
+                     Body,
+                     Cookie,
+                     Header,
+                     Form,
+                     File,
+                     UploadFile,
+                     status,
+                     HTTPException,
+                     Request)
+
 import uvicorn
 from starlette.status import HTTP_204_NO_CONTENT
 from pydantic import BaseModel, Field
@@ -70,7 +82,7 @@ async def generate_bill(items: list[Item], user: User, discount: int | None = Bo
 
 #Header and cookie parameter
 @app.get("/headersAndCookies", tags=["Header", "Cookie"])
-async def getHeaderAndCookies(
+async def get_header_and_cookies(
   cookie_id : int | None = Cookie(None),
   accept_encoding : str | None = Header(None),
   host : str|None = Header(None)
@@ -118,9 +130,13 @@ class UserLogin(UserDetails):
 class UserLoginOutput(UserDetails):
     message : str="Welcome User"
 
-@app.post("/userLogin", response_model=UserLoginOutput, response_model_exclude=["name", "age"])
+@app.post("/userLogin", response_model=UserLoginOutput, response_model_exclude={"name", "age"}, tags=["Response_model"])
 async def user_login(user: UserLogin):
     return user
+
+@app.post("/old_server", status_code=status.HTTP_204_NO_CONTENT, tags=["Response_model"])
+async def old_server():
+    return "hello from old server"
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=7800, reload=True)
