@@ -13,6 +13,7 @@ from fastapi import (FastAPI,
                      HTTPException,
                      Request)
 
+from fastapi.responses import JSONResponse
 import uvicorn
 from starlette.status import HTTP_204_NO_CONTENT
 from pydantic import BaseModel, Field
@@ -137,6 +138,21 @@ async def user_login(user: UserLogin):
 @app.post("/old_server", status_code=status.HTTP_204_NO_CONTENT, tags=["Response_model"])
 async def old_server():
     return "hello from old server"
+
+#Error Handling
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        content=f"Hello i am exception handler. Server is lazy! message from server: {exc.detail}")
+
+@app.get("/test/{no}", tags=["Exception"])
+async def test_execption(no: int):
+    if no%3 == 0:
+        raise HTTPException(detail="I dont like multiple of 3", status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return {"Entered No" : no}
+
+
+
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=7800, reload=True)
