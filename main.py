@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Literal
 
 from fastapi import (FastAPI,
                      Query,
@@ -12,6 +12,7 @@ from fastapi import (FastAPI,
                      status,
                      HTTPException,
                      Request)
+from fastapi.encoders import jsonable_encoder
 
 from fastapi.responses import JSONResponse
 import uvicorn
@@ -25,7 +26,7 @@ app=FastAPI()
          summary="my first hello world get route",
          description="this my first fast api i build for studty purpose",
          status_code=HTTP_204_NO_CONTENT)
-async def helloWorld():
+async def hello_world():
     return {"Message": "hello world my first web page"}
 
 @app.put("/put", tags=["Put"])
@@ -70,7 +71,7 @@ async def generate_bill(items: list[Item], user: User, discount: int | None = Bo
     """
     When you have multiple Pydantic models in a FastAPI endpoint (like your items and user),
     FastAPI automatically expects them to be keys in a single JSON body.
-    However, if you have only one Pydantic model but you still want it to be wrapped in a
+    However, if you have only one Pydantic model, but you still want it to be wrapped in a
     specific key, you use the embed=True parameter within Body()
     """
     total = 0
@@ -151,7 +152,46 @@ async def test_execption(no: int):
         raise HTTPException(detail="I dont like multiple of 3", status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
     return {"Entered No" : no}
 
+#JSON Compatible Encoder
+class ItemModel(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float = 10.5
 
+class ItemModelInput(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    price: float | None = None
+    tax: float | None = None
+
+item_list={
+    "foo": {"name": "pen", "description":"Hello pen", "price":10},
+    "bah": {"name":"note", "price":35},
+    "mah" :{"name": "bottle", "price": 100}
+}
+
+@app.get("/list_item/list/{item_id}", tags=["Json Encoder"])
+async def list_item_get(item_id : str):
+    if item_id not in item_list:
+        return "key not found"
+    return item_list[item_id]
+
+@app.post("/list_item/addItem", tags=["Json Encoder"])
+async def add_list_item(item_id: str, item: ItemModel):
+    item_list[item_id] = jsonable_encoder(item)
+    return item_list[item_id]
+
+@app.patch("/list_item/edit/{item_id}", tags=["Json Encoder"])
+async def edit_item_list(item_id: str, item: ItemModelInput):
+    if item_id not in item_list:
+        return "key not found"
+    stored_item_data = item_list[item_id]
+    stored_item_model = ItemModel(**stored_item_data)
+    update_item=item.model_dump(exclude_unset=True)  #item.dict() is deprecated
+    update_item_new = stored_item_model.model_copy(update=update_item) # .copy() is deprecated
+    item_list[item_id] = jsonable_encoder(update_item_new)
+    return update_item_new
 
 
 if __name__ == '__main__':
