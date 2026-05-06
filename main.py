@@ -11,7 +11,8 @@ from fastapi import (FastAPI,
                      UploadFile,
                      status,
                      HTTPException,
-                     Request)
+                     Request,
+                     BackgroundTasks, Depends)
 from fastapi.encoders import jsonable_encoder
 
 from fastapi.responses import JSONResponse
@@ -193,7 +194,29 @@ async def edit_item_list(item_id: str, item: ItemModelInput):
     item_list[item_id] = jsonable_encoder(update_item_new)
     return update_item_new
 
+#Background task
 
+def write_mail(message=""):
+    with open("backgroundtask.txt", "a") as file:
+        file.write(message)
+
+def query_writer(background_task: BackgroundTasks, q:str | None = None):
+    if q:
+        q_message=f"\nquery: {q}\n"
+        background_task.add_task(write_mail,q_message)
+    return q
+
+@app.post("/background", tags=["Background Task"])
+async def background(background_task: BackgroundTasks, message: str, q: str=Depends(query_writer)):
+    background_task.add_task(write_mail, message)
+    return "Success"
+
+"""
+Dependency Injection:
+ FastAPI sees Depend() then Execute query_writer() before the route function."
+ Special object like Request, Response, BackgroundTasks are injected automatically by FastAPI
+ then FastAPI checks normal parameter in request parameter for Depend() function parameter
+"""
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=7800, reload=True)
 
