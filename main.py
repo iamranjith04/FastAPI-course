@@ -50,7 +50,7 @@ title="E-Commerce API",
     openapi_tags=tags_metadata
 )
 
-@app.get("/",
+@app.get("/get",
          tags=["Get"] ,
          summary="my first hello world get route",
          description="this my first fast api i build for studty purpose",
@@ -58,15 +58,15 @@ title="E-Commerce API",
 async def hello_world():
     return {"Message": "hello world my first web page"}
 
-@app.put("/put", tags=["Put"])
-async def put():
+@app.put("/put/{name}", tags=["Put"])
+async def put(name: str):
     """
     This is a put function example
     - **point 1**: point 1 description
     - **point 2**: point 2 description
     :return:
     """
-    return {"message": "hello from put"}
+    return {"message": f"hello {name} from put"}
 
 @app.get("/items/{item_id}/{item_name}", tags=["Get"] )
 async def return_item(item_id: int = Path(..., ge=200 , lt=1000),
@@ -175,8 +175,8 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         content=f"Hello i am exception handler. Server is lazy! message from server: {exc.detail}")
 
-@app.get("/test/{no}", tags=["Exception"])
-async def test_execption(no: int):
+@app.get("/demo/{no}", tags=["Exception"])
+async def demo_execption(no: int):
     if no%3 == 0:
         raise HTTPException(detail="I dont like multiple of 3", status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
     return {"Entered No" : no}
