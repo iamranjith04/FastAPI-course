@@ -20,7 +20,35 @@ import uvicorn
 from starlette.status import HTTP_204_NO_CONTENT
 from pydantic import BaseModel, Field
 
-app=FastAPI()
+tags_metadata = [
+    {
+        "name": "Get",
+        "description": "Operations related to get."
+    },
+    {
+        "name": "Put",
+        "description": "Operations related to put."
+    },
+]
+app=FastAPI(
+title="E-Commerce API",
+    description="""
+        This API allows users to manage products, users,
+        authentication, and orders.
+        """,
+    version="1.0.0",
+    terms_of_service="https://example.com/terms/",
+    contact={
+        "name": "Ranjith",
+        "email": "ranjith@example.com",
+        "url": "https://example.com"
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT"
+    },
+    openapi_tags=tags_metadata
+)
 
 @app.get("/",
          tags=["Get"] ,
