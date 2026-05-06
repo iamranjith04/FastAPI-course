@@ -14,7 +14,7 @@ from fastapi import (FastAPI,
                      Request,
                      BackgroundTasks, Depends)
 from fastapi.encoders import jsonable_encoder
-
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 import uvicorn
 from starlette.status import HTTP_204_NO_CONTENT
@@ -245,6 +245,24 @@ Dependency Injection:
  Special object like Request, Response, BackgroundTasks are injected automatically by FastAPI
  then FastAPI checks normal parameter in request parameter for Depend() function parameter
 """
+
+#.mount()
+"""
+syntax: app.mount(path, sub_application)
+
+.mount() is used to attach an entire separate ASGI application inside your FastAPI app at a specific path.
+Most commonly used for:
+    static files
+    sub applications
+    admin panels
+    independent APIs
+    GraphQL apps
+    frontend apps
+"""
+
+app.mount("/static", StaticFiles(directory="static"), name="static") #/static/index.html
+
+
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=7800, reload=True)
 
