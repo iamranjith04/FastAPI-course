@@ -32,7 +32,18 @@ class Item:
 async def post_item(common: Item = Depends(Item)):
     return common
 
+#Sub-Dependency
+def func1(q: str|None = None):
+    return q
 
+def func2(q: str|None = Depends(func1), q2: str = "q2"):
+    if q:
+        return q
+    return q2
+
+@app.get("/sub-dependency/")
+async def sub_dependency(q = Depends(func2)):
+    return q
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
 
