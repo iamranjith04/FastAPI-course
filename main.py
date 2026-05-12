@@ -1,114 +1,94 @@
 import uvicorn
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.encoders import jsonable_encoder
+from fastapi import FastAPI, Depends, HTTPException, status, Query, Form
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import datetime, timedelta, timezone
+from passlib.context import CryptContext
+from jose import jwt, JWTError
+
 
 app = FastAPI()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-fake_users_db = {
-    "johndoe": dict(
-        username="johndoe",
-        full_name="John Doe",
-        email="johndoe@example.com",
-        hashed_password="fakehashedsecret",
-        disabled=False,
-    ),
-    "alice": dict(
-        username="alice",
-        full_name="Alice Wonderson",
-        email="alice@example.com",
-        hashed_password="fakehashedsecret2",
-        disabled=False,
-    ),
-}
-
-def get_db(username):
-    if username in fake_users_db:
-        return UserInDB(**fake_users_db[username])
-    return None
-
-def fake_hash_password(password: str):
-    return f"fakehashed{password}"
-
+SECRET_KEY = "@#this#keyistosign%the^jwttokenforvalidation$$"
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class User(BaseModel):
     username: str
-    email: str | None = None
-    full_name: str | None = None
-    disabled: bool | None = None
-
+    age: int
+    full_name: str|None = None
 
 class UserInDB(User):
-    hashed_password: str
+    hash_password : str
 
+fake_db = {
+    "johndoe":{
+        "username": "johndoe",
+        "age": 18,
+        "full_name": "johndoe",
+        "hash_password": "$2b$12$siBLi3Q273ZwqB7.3q4vuOBkc4YuvQmr42itqEJsNn6kROFiBGHJm"
+    }
+}
 
+def hashed_password(password):
+    return pwd_context.hash(password)
 
+def password_verify(password, hash_db_password):
+    return pwd_context.verify(password, hash_db_password)
 
+def get_db(username):
+    if username in fake_db:
+        return UserInDB(**fake_db[username])
+    return None
 
-def fake_decode_token(token):
-    if token in fake_users_db:
-        return UserInDB(**fake_users_db[token])
+def generate_token(username, expire_time_in_minutes, role):
+    claims = {
+        "sub":username,
+        "iat": datetime.now(timezone.utc),
+        "exp":datetime.now(timezone.utc)+timedelta(minutes=expire_time_in_minutes),
+        "role": role
+    }
+    jwt_token = jwt.encode(claims, SECRET_KEY, algorithm="HS256")
+    return jwt_token
 
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid authentication credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+def verify_token(token = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms="HS256")
+        username =  payload.get("sub")
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
 
+    return username
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    user = fake_decode_token(token)
-    print(user)
-    return user
+@app.post("/register-user/")
+async def register_user(user: User = Form(), password: str = Query(..., min_length=8)):
+    user_db = get_db(user.username)
+    if user_db:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already exist")
+    user_db = UserInDB(username=user.username,
+                       age= user.age,
+                       full_name=user.full_name,
+                       hash_password = hashed_password(password))
+    fake_db[user.username]=user_db.model_dump()
+    return "Registered successfully"
 
+@app.post("/login")
+async def login_user(form_data : OAuth2PasswordRequestForm = Depends()):
+    user_db = get_db(form_data.username)
+    if not user_db or not password_verify(form_data.password, user_db.hash_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Username or password")
 
-async def get_current_active_user(current_user: User = Depends(get_current_user)):
-    if current_user.disabled:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
+    token = generate_token(user_db.username, expire_time_in_minutes=30, role="admin")
 
-@app.post("/token")
-async def login(credentials: OAuth2PasswordRequestForm = Depends()):
-    """
-    This function is useful for swagger to get the token and set the token for future request. It identifies
-    this route by the tokenurl field in OAuth2PasswordBearer(). the return type also fixed as it expect access_token,
-    and token_type
-    """
-    user = get_db(credentials.username)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password"
-        )
-    hashed_password = fake_hash_password(credentials.password)
-    if hashed_password != user.hashed_password:
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username or password"
-            )
-    return {"access_token": user.username, "token_type": "bearer"}
+    return {"access_token": token , "token_type": "bearer"}
 
+@app.get("/all-users")
+async def get_all_users(user_name = Depends(verify_token)):
+    return {
+        "message" : f"Hello {user_name}",
+        "users" : [user for user in fake_db.keys()]
+    }
 
-@app.get("/users/me")
-async def get_me(current_user: User = Depends(get_current_active_user)):
-    """
-    This function expect a authorization header of bearer token which is the username in db
-    curl -X GET "http://127.0.0.1:8000/users/me" -H "Authorization: Bearer johndoe"
-    """
-    return current_user
-
-
-@app.get("/items/")
-async def read_items(token: str = Depends(oauth2_scheme)):
-    """
-       This function expect a authorization header of bearer token which is the username in db
-       curl -X GET "http://127.0.0.1:8000/items" -H "Authorization: Bearer johndoe"
-    """
-    return {"token": token}
 
 if __name__ == '__main__':
-    uvicorn.run("main:app.py", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
