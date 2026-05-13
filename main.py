@@ -1,6 +1,10 @@
+import time
 from fastapi import FastAPI, Depends
 import uvicorn
-
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
+from starlette.responses import Response
 
 app=FastAPI()
 
@@ -44,6 +48,20 @@ def func2(q: str|None = Depends(func1), q2: str = "q2"):
 @app.get("/sub-dependency/")
 async def sub_dependency(q = Depends(func2)):
     return q
+
+#Middleware and CROSMiddleware
+class MyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        start_time = time.time()
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        response.headers["X-process-time"] = str(process_time)
+        return response
+
+app.add_middleware(MyMiddleware)
+origins = ["http://localhost:800"]
+app.add_middleware(CORSMiddleware, allow_origins = origins)
+
 if __name__ == '__main__':
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
 
